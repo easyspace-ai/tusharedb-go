@@ -1,0 +1,13 @@
+.DS_Store
+
+# Go
+bin/
+dist/
+*.test
+coverage.out
+
+# Local data
+data/
+tmp/
+*.duckdb
+*.duckdb.wal
