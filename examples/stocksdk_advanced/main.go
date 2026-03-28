@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
-	"github.com/easyspace-ai/tusharedb-go/pkg/tsdb"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/pkg/tsdb"
 )
 
 func main() {

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/multisource"
-	"github.com/easyspace-ai/tusharedb-go/internal/storage/parquet"
+	"github.com/easyspace-ai/stock_api/internal/provider/multisource"
+	"github.com/easyspace-ai/stock_api/internal/storage/parquet"
 )
 
 // Client 实时数据客户端 - 整合多数据源采集 + Parquet存储

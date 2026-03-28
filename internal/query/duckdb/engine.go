@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/frame"
+	"github.com/easyspace-ai/stock_api/internal/frame"
 
 	_ "github.com/marcboeker/go-duckdb"
 )
@@ -66,8 +66,8 @@ type BarRequest struct {
 }
 
 type Engine struct {
-	cfg  Config
-	db   *sql.DB
+	cfg Config
+	db  *sql.DB
 }
 
 func NewEngine(cfg Config) (*Engine, error) {
@@ -105,8 +105,8 @@ func (e *Engine) Close() error {
 func (e *Engine) initViews(ctx context.Context) error {
 	// 注册 Parquet 文件视图
 	viewDefs := []struct {
-		name      string
-		pattern   string
+		name    string
+		pattern string
 	}{
 		{"v_trade_cal", "lake/trade_cal/**/*.parquet"},
 		{"v_stock_basic", "lake/stock_basic/**/*.parquet"},

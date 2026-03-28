@@ -1,6 +1,6 @@
 package realtimedata
 
-import "github.com/easyspace-ai/tusharedb-go/internal/provider/multisource"
+import "github.com/easyspace-ai/stock_api/internal/provider/multisource"
 
 // DataSourceType 数据源枚举（与 multisource 一致）。
 type DataSourceType = multisource.DataSourceType

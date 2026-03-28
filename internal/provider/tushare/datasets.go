@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 func (c *Client) FetchTradeCalendar(ctx context.Context, startDate, endDate string) ([]provider.TradeCalendarRow, error) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/easyspace-ai/tusharedb-go/pkg/tsdb"
+	"github.com/easyspace-ai/stock_api/pkg/tsdb"
 )
 
 func main() {

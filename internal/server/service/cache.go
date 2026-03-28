@@ -7,24 +7,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
-	"github.com/easyspace-ai/tusharedb-go/pkg/tsdb"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/pkg/tsdb"
 )
 
 // CacheService 数据缓存服务
 // 负责管理全市场数据的持久化和缓存
 type CacheService struct {
-	client     *tsdb.UnifiedClient
-	stockSDK   *stocksdk.Client
-	dataDir    string
-	
+	client   *tsdb.UnifiedClient
+	stockSDK *stocksdk.Client
+	dataDir  string
+
 	// 内存缓存
 	cache      map[string]interface{}
 	cacheTime  map[string]time.Time
 	cacheMutex sync.RWMutex
-	
+
 	// 缓存过期时间
-	ttl        time.Duration
+	ttl time.Duration
 }
 
 // NewCacheService 创建缓存服务
@@ -91,34 +91,34 @@ func (s *CacheService) GetAllAShareQuotes(ctx context.Context) ([]stocksdk.FullQ
 	var allQuotes []stocksdk.FullQuote
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	semaphore := make(chan struct{}, 5)
-	
+
 	for i := 0; i < len(codes); i += batchSize {
 		end := i + batchSize
 		if end > len(codes) {
 			end = len(codes)
 		}
 		batch := codes[i:end]
-		
+
 		wg.Add(1)
 		go func(batchCodes []string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			quotes, err := s.stockSDK.GetFullQuotes(ctx, batchCodes)
 			if err != nil {
 				return
 			}
-			
+
 			mu.Lock()
 			allQuotes = append(allQuotes, quotes...)
 			mu.Unlock()
 		}(batch)
 	}
-	
+
 	wg.Wait()
 
 	// 4. 更新内存缓存
@@ -145,29 +145,29 @@ func (s *CacheService) GetAllAShareQuotesWithProgress(
 	var allQuotes []stocksdk.FullQuote
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	semaphore := make(chan struct{}, 5)
 	completed := 0
-	
+
 	for i := 0; i < len(codes); i += batchSize {
 		end := i + batchSize
 		if end > len(codes) {
 			end = len(codes)
 		}
 		batch := codes[i:end]
-		
+
 		wg.Add(1)
 		go func(batchCodes []string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			quotes, err := s.stockSDK.GetFullQuotes(ctx, batchCodes)
 			if err != nil {
 				return
 			}
-			
+
 			mu.Lock()
 			allQuotes = append(allQuotes, quotes...)
 			completed += len(batchCodes)
@@ -177,7 +177,7 @@ func (s *CacheService) GetAllAShareQuotesWithProgress(
 			mu.Unlock()
 		}(batch)
 	}
-	
+
 	wg.Wait()
 
 	// 更新缓存

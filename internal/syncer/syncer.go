@@ -6,11 +6,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/dataset"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
-	"github.com/easyspace-ai/tusharedb-go/internal/query/duckdb"
-	"github.com/easyspace-ai/tusharedb-go/internal/storage/meta"
-	"github.com/easyspace-ai/tusharedb-go/internal/storage/parquet"
+	"github.com/easyspace-ai/stock_api/internal/dataset"
+	"github.com/easyspace-ai/stock_api/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/query/duckdb"
+	"github.com/easyspace-ai/stock_api/internal/storage/meta"
+	"github.com/easyspace-ai/stock_api/internal/storage/parquet"
 )
 
 type Config struct {

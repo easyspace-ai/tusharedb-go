@@ -1,6 +1,6 @@
 package dataset
 
-import "github.com/easyspace-ai/tusharedb-go/internal/provider"
+import "github.com/easyspace-ai/stock_api/internal/provider"
 
 type UpdateMode string
 

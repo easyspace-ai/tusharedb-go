@@ -10,44 +10,44 @@ import (
 	"sync"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 	_ "github.com/marcboeker/go-duckdb"
 )
 
 // DataIntegrityCheck 数据完整性检查结果
 type DataIntegrityCheck struct {
-	Symbol           string    `json:"symbol"`
-	Period           string    `json:"period"`
-	Adjust           string    `json:"adjust"`
-	TotalRecords     int       `json:"total_records"`
-	ValidRecords     int       `json:"valid_records"`      // 字段完整的记录数
-	MissingFields    int       `json:"missing_fields"`     // 缺失字段的记录数
-	TradeDateGaps    int       `json:"trade_date_gaps"`    // 缺失交易日数量
-	ExpectedRecords  int       `json:"expected_records"`   // 期望的记录数（根据交易日历）
-	FirstDate        string    `json:"first_date"`
-	LastDate         string    `json:"last_date"`
-	IsComplete       bool      `json:"is_complete"`        // 是否完整
-	CompletenessPct  float64   `json:"completeness_pct"`   // 完整度百分比
-	LastVerifiedAt   time.Time `json:"last_verified_at"`
-	Issues           []string  `json:"issues,omitempty"`   // 发现的问题
+	Symbol          string    `json:"symbol"`
+	Period          string    `json:"period"`
+	Adjust          string    `json:"adjust"`
+	TotalRecords    int       `json:"total_records"`
+	ValidRecords    int       `json:"valid_records"`    // 字段完整的记录数
+	MissingFields   int       `json:"missing_fields"`   // 缺失字段的记录数
+	TradeDateGaps   int       `json:"trade_date_gaps"`  // 缺失交易日数量
+	ExpectedRecords int       `json:"expected_records"` // 期望的记录数（根据交易日历）
+	FirstDate       string    `json:"first_date"`
+	LastDate        string    `json:"last_date"`
+	IsComplete      bool      `json:"is_complete"`      // 是否完整
+	CompletenessPct float64   `json:"completeness_pct"` // 完整度百分比
+	LastVerifiedAt  time.Time `json:"last_verified_at"`
+	Issues          []string  `json:"issues,omitempty"` // 发现的问题
 }
 
 // KlineCacheService K线缓存服务
 // 负责管理K线数据的本地持久化和缓存，解决外部API不稳定的问题
 type KlineCacheService struct {
-	sdkClient  *stocksdk.Client
-	db         *sql.DB
-	dataDir    string
-	dbPath     string
-	
+	sdkClient *stocksdk.Client
+	db        *sql.DB
+	dataDir   string
+	dbPath    string
+
 	// 内存缓存
 	memCache      map[string]*klineCacheEntry
 	memCacheMutex sync.RWMutex
-	
+
 	// 缓存配置
-	defaultTTL    time.Duration  // 默认缓存过期时间
-	longTermTTL   time.Duration  // 长期缓存（历史数据）
-	
+	defaultTTL  time.Duration // 默认缓存过期时间
+	longTermTTL time.Duration // 长期缓存（历史数据）
+
 	// 交易日历缓存
 	tradeCalendar   []string
 	calendarMutex   sync.RWMutex
@@ -73,36 +73,36 @@ func NewKlineCacheService(dataDir string, sdkClient *stocksdk.Client) (*KlineCac
 	if dataDir == "" {
 		dataDir = "./data"
 	}
-	
+
 	dbPath := filepath.Join(dataDir, "duckdb", "kline_cache.duckdb")
-	
+
 	// 确保目录存在
 	if err := ensureDir(filepath.Dir(dbPath)); err != nil {
 		return nil, fmt.Errorf("failed to create kline cache directory: %w", err)
 	}
-	
+
 	// 打开DuckDB连接
 	db, err := sql.Open("duckdb", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open kline cache database: %w", err)
 	}
-	
+
 	service := &KlineCacheService{
 		sdkClient:   sdkClient,
 		db:          db,
 		dataDir:     dataDir,
 		dbPath:      dbPath,
 		memCache:    make(map[string]*klineCacheEntry),
-		defaultTTL:  24 * time.Hour,     // 默认1天
+		defaultTTL:  24 * time.Hour,      // 默认1天
 		longTermTTL: 30 * 24 * time.Hour, // 历史数据30天
 	}
-	
+
 	// 初始化表结构
 	if err := service.initSchema(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to init kline cache schema: %w", err)
 	}
-	
+
 	return service, nil
 }
 
@@ -159,7 +159,7 @@ func (s *KlineCacheService) initSchema() error {
 		
 		CREATE INDEX IF NOT EXISTS idx_trade_calendar ON trade_calendar(date, is_open);
 	`
-	
+
 	_, err := s.db.Exec(query)
 	return err
 }
@@ -182,9 +182,9 @@ func (s *KlineCacheService) GetHistoryKline(ctx context.Context, symbol, period,
 	if endDate == "" {
 		endDate = "20500101"
 	}
-	
+
 	key := cacheKey(symbol, period, adjust)
-	
+
 	// 1. 检查内存缓存
 	s.memCacheMutex.RLock()
 	if entry, ok := s.memCache[key]; ok {
@@ -196,7 +196,7 @@ func (s *KlineCacheService) GetHistoryKline(ctx context.Context, symbol, period,
 		}
 	}
 	s.memCacheMutex.RUnlock()
-	
+
 	// 2. 检查本地数据库缓存
 	cached, err := s.getFromDB(symbol, period, adjust, startDate, endDate)
 	if err == nil && len(cached) > 0 {
@@ -217,7 +217,7 @@ func (s *KlineCacheService) GetHistoryKline(ctx context.Context, symbol, period,
 			return cached, nil
 		}
 	}
-	
+
 	// 3. 从API获取（带重试）
 	data, err := s.fetchFromAPI(ctx, symbol, period, adjust, startDate, endDate)
 	if err != nil {
@@ -228,12 +228,12 @@ func (s *KlineCacheService) GetHistoryKline(ctx context.Context, symbol, period,
 		}
 		return nil, fmt.Errorf("failed to get kline from API and no cache available: %w", err)
 	}
-	
+
 	// 4. 保存到缓存
 	if err := s.saveToDB(symbol, period, adjust, data); err != nil {
 		log.Printf("[KlineCache] Failed to save to DB: %v", err)
 	}
-	
+
 	// 更新内存缓存
 	s.memCacheMutex.Lock()
 	s.memCache[key] = &klineCacheEntry{
@@ -244,7 +244,7 @@ func (s *KlineCacheService) GetHistoryKline(ctx context.Context, symbol, period,
 		Adjust:    adjust,
 	}
 	s.memCacheMutex.Unlock()
-	
+
 	log.Printf("[KlineCache] Fetched from API and cached: %s (%d records)", key, len(data))
 	return data, nil
 }
@@ -254,36 +254,36 @@ func (s *KlineCacheService) BatchGetKline(ctx context.Context, symbols []string,
 	results := make(map[string][]stocksdk.HistoryKline)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	// 限制并发数
 	semaphore := make(chan struct{}, 10)
-	
+
 	for _, symbol := range symbols {
 		wg.Add(1)
 		go func(sym string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			// 获取足够的数据（请求更多数据以确保计算指标时有足够的历史）
 			data, err := s.GetHistoryKline(ctx, sym, period, adjust, "", "")
 			if err != nil {
 				log.Printf("[KlineCache] Failed to get kline for %s: %v", sym, err)
 				return
 			}
-			
+
 			if len(data) < minDays {
 				log.Printf("[KlineCache] Insufficient data for %s: %d < %d", sym, len(data), minDays)
 				return
 			}
-			
+
 			mu.Lock()
 			results[sym] = data
 			mu.Unlock()
 		}(symbol)
 	}
-	
+
 	wg.Wait()
 	return results
 }
@@ -295,15 +295,15 @@ func (s *KlineCacheService) PrefetchAllKlines(ctx context.Context, period, adjus
 	if err != nil {
 		return fmt.Errorf("failed to get A-share codes: %w", err)
 	}
-	
+
 	total := len(codes)
 	completed := 0
 	var mu sync.Mutex
-	
+
 	// 限制并发数，避免对API造成过大压力
 	semaphore := make(chan struct{}, 5)
 	var wg sync.WaitGroup
-	
+
 	for _, code := range codes {
 		// 检查是否需要取消
 		select {
@@ -311,14 +311,14 @@ func (s *KlineCacheService) PrefetchAllKlines(ctx context.Context, period, adjus
 			return ctx.Err()
 		default:
 		}
-		
+
 		wg.Add(1)
 		go func(c string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			// 检查本地是否已有足够新鲜的数据
 			if s.hasFreshCache(c, period, adjust) {
 				mu.Lock()
@@ -329,25 +329,25 @@ func (s *KlineCacheService) PrefetchAllKlines(ctx context.Context, period, adjus
 				mu.Unlock()
 				return
 			}
-			
+
 			// 获取数据
 			_, err := s.GetHistoryKline(ctx, c, period, adjust, "", "")
 			if err != nil {
 				log.Printf("[KlineCache] Prefetch failed for %s: %v", c, err)
 			}
-			
+
 			mu.Lock()
 			completed++
 			if onProgress != nil {
 				onProgress(completed, total)
 			}
 			mu.Unlock()
-			
+
 			// 适当延迟，避免请求过快
 			time.Sleep(100 * time.Millisecond)
 		}(code)
 	}
-	
+
 	wg.Wait()
 	log.Printf("[KlineCache] Prefetch completed: %d/%d", completed, total)
 	return nil
@@ -359,7 +359,7 @@ func (s *KlineCacheService) PrefetchAllKlines(ctx context.Context, period, adjus
 func (s *KlineCacheService) getFromDB(symbol, period, adjust, startDate, endDate string) ([]stocksdk.HistoryKline, error) {
 	var query string
 	var args []interface{}
-	
+
 	if startDate == "" && endDate == "" {
 		// 获取全部数据
 		query = `
@@ -388,13 +388,13 @@ func (s *KlineCacheService) getFromDB(symbol, period, adjust, startDate, endDate
 		`
 		args = []interface{}{symbol, period, adjust, startDate, endDate}
 	}
-	
+
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var results []stocksdk.HistoryKline
 	for rows.Next() {
 		var k stocksdk.HistoryKline
@@ -408,7 +408,7 @@ func (s *KlineCacheService) getFromDB(symbol, period, adjust, startDate, endDate
 		}
 		results = append(results, k)
 	}
-	
+
 	return results, rows.Err()
 }
 
@@ -417,13 +417,13 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 	if len(data) == 0 {
 		return nil
 	}
-	
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// 先删除旧数据（避免UPSERT兼容性问题）
 	_, err = tx.Exec(`
 		DELETE FROM kline_data 
@@ -432,7 +432,7 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 	if err != nil {
 		return fmt.Errorf("failed to delete old data: %w", err)
 	}
-	
+
 	// 批量插入新数据
 	stmt, err := tx.Prepare(`
 		INSERT INTO kline_data 
@@ -444,14 +444,14 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 		return fmt.Errorf("failed to prepare insert: %w", err)
 	}
 	defer stmt.Close()
-	
+
 	var startDate, endDate string
 	for i, k := range data {
 		if i == 0 {
 			startDate = k.Date
 		}
 		endDate = k.Date
-		
+
 		_, err := stmt.Exec(
 			symbol, period, adjust, k.Date, k.Open, k.High, k.Low, k.Close,
 			k.Volume, k.Amount, k.Amplitude, k.ChangePercent, k.Change, k.TurnoverRate,
@@ -460,7 +460,7 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 			return fmt.Errorf("failed to insert record %s: %w", k.Date, err)
 		}
 	}
-	
+
 	// 删除并插入元数据
 	_, err = tx.Exec(`
 		DELETE FROM kline_metadata 
@@ -469,7 +469,7 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 	if err != nil {
 		return fmt.Errorf("failed to delete old metadata: %w", err)
 	}
-	
+
 	_, err = tx.Exec(`
 		INSERT INTO kline_metadata (symbol, period, adjust, count, start_date, end_date)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -477,11 +477,11 @@ func (s *KlineCacheService) saveToDB(symbol, period, adjust string, data []stock
 	if err != nil {
 		return fmt.Errorf("failed to insert metadata: %w", err)
 	}
-	
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit: %w", err)
 	}
-	
+
 	log.Printf("[KlineCache] Saved %d records to DB for %s_%s_%s", len(data), symbol, period, adjust)
 	return nil
 }
@@ -493,17 +493,17 @@ func (s *KlineCacheService) isCacheFresh(symbol, period, adjust string, count in
 		SELECT updated_at FROM kline_metadata 
 		WHERE symbol = ? AND period = ? AND adjust = ?
 	`, symbol, period, adjust).Scan(&updatedAt)
-	
+
 	if err != nil {
 		return false
 	}
-	
+
 	// 历史数据（超过60天的数据）缓存30天，近期数据缓存1天
 	ttl := s.longTermTTL
 	if time.Since(updatedAt) < ttl {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -519,7 +519,7 @@ func (s *KlineCacheService) hasFreshCache(symbol, period, adjust string) bool {
 		}
 	}
 	s.memCacheMutex.RUnlock()
-	
+
 	// 数据库检查
 	return s.isCacheFresh(symbol, period, adjust, 0)
 }
@@ -529,19 +529,19 @@ func (s *KlineCacheService) getTTLForDateRange(data []stocksdk.HistoryKline) tim
 	if len(data) == 0 {
 		return s.defaultTTL
 	}
-	
+
 	// 获取最后一条数据的日期
 	lastDate := data[len(data)-1].Date
 	lastTime, err := time.Parse("20060102", lastDate)
 	if err != nil {
 		return s.defaultTTL
 	}
-	
+
 	// 如果最后数据是60天前的，使用长期缓存
 	if time.Since(lastTime) > 60*24*time.Hour {
 		return s.longTermTTL
 	}
-	
+
 	return s.defaultTTL
 }
 
@@ -558,7 +558,7 @@ func (s *KlineCacheService) fetchFromAPI(ctx context.Context, symbol, period, ad
 	default:
 		klinePeriod = stocksdk.KlinePeriodDaily
 	}
-	
+
 	var adjustType stocksdk.AdjustType
 	switch adjust {
 	case "qfq":
@@ -568,14 +568,14 @@ func (s *KlineCacheService) fetchFromAPI(ctx context.Context, symbol, period, ad
 	default:
 		adjustType = stocksdk.AdjustTypeNone
 	}
-	
+
 	// 带重试的请求
 	var lastErr error
 	for i := 0; i < 3; i++ {
 		if i > 0 {
 			time.Sleep(time.Duration(i) * time.Second) // 递增延迟
 		}
-		
+
 		data, err := s.sdkClient.GetHistoryKline(ctx, symbol, &stocksdk.HistoryKlineOptions{
 			Period:    klinePeriod,
 			Adjust:    adjustType,
@@ -585,10 +585,10 @@ func (s *KlineCacheService) fetchFromAPI(ctx context.Context, symbol, period, ad
 		if err == nil {
 			return data, nil
 		}
-		
+
 		lastErr = err
 		log.Printf("[KlineCache] API request failed (attempt %d/3): %v", i+1, err)
-		
+
 		// 检查是否是可重试的错误
 		if strings.Contains(err.Error(), "EOF") || strings.Contains(err.Error(), "connection") {
 			continue
@@ -596,7 +596,7 @@ func (s *KlineCacheService) fetchFromAPI(ctx context.Context, symbol, period, ad
 		// 非网络错误，直接返回
 		break
 	}
-	
+
 	return nil, lastErr
 }
 
@@ -633,44 +633,44 @@ func (s *KlineCacheService) SyncTradeCalendar(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get trading calendar: %w", err)
 	}
-	
+
 	// 开始事务
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// 清空旧数据
 	_, err = tx.Exec("DELETE FROM trade_calendar")
 	if err != nil {
 		return err
 	}
-	
+
 	// 插入新数据
 	stmt, err := tx.Prepare("INSERT INTO trade_calendar (date, is_open) VALUES (?, true)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	
+
 	for _, date := range dates {
 		_, err = stmt.Exec(date)
 		if err != nil {
 			return err
 		}
 	}
-	
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	
+
 	// 更新内存缓存
 	s.calendarMutex.Lock()
 	s.tradeCalendar = dates
 	s.calendarUpdated = time.Now()
 	s.calendarMutex.Unlock()
-	
+
 	log.Printf("[KlineCache] Trade calendar synced: %d trading days", len(dates))
 	return nil
 }
@@ -685,14 +685,14 @@ func (s *KlineCacheService) getTradeCalendar() ([]string, error) {
 		return calendar, nil
 	}
 	s.calendarMutex.RUnlock()
-	
+
 	// 从数据库获取
 	rows, err := s.db.Query("SELECT date FROM trade_calendar WHERE is_open = true ORDER BY date ASC")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var dates []string
 	for rows.Next() {
 		var date string
@@ -701,17 +701,17 @@ func (s *KlineCacheService) getTradeCalendar() ([]string, error) {
 		}
 		dates = append(dates, date)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	// 更新内存缓存
 	s.calendarMutex.Lock()
 	s.tradeCalendar = dates
 	s.calendarUpdated = time.Now()
 	s.calendarMutex.Unlock()
-	
+
 	return dates, nil
 }
 
@@ -723,34 +723,34 @@ func (s *KlineCacheService) CheckDataIntegrity(symbol, period, adjust string) (*
 		Adjust: adjust,
 		Issues: []string{},
 	}
-	
+
 	// 从数据库获取数据
 	data, err := s.getFromDB(symbol, period, adjust, "", "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data from DB: %w", err)
 	}
-	
+
 	result.TotalRecords = len(data)
 	if len(data) == 0 {
 		result.Issues = append(result.Issues, "No data found")
 		return result, nil
 	}
-	
+
 	result.FirstDate = data[0].Date
 	result.LastDate = data[len(data)-1].Date
-	
+
 	// 1. 检查字段完整性
 	validCount := 0
 	for _, k := range data {
-		if k.Open != nil && k.Close != nil && k.High != nil && k.Low != nil && 
-		   k.Volume != nil && k.Date != "" {
+		if k.Open != nil && k.Close != nil && k.High != nil && k.Low != nil &&
+			k.Volume != nil && k.Date != "" {
 			validCount++
 		} else {
 			result.MissingFields++
 		}
 	}
 	result.ValidRecords = validCount
-	
+
 	// 2. 日线数据检查交易日连续性
 	if period == "daily" || period == "" {
 		tradeDates, err := s.getTradeCalendar()
@@ -760,13 +760,13 @@ func (s *KlineCacheService) CheckDataIntegrity(symbol, period, adjust string) (*
 			// 计算应该有的交易日数量
 			expectedCount := s.countExpectedTradeDays(tradeDates, result.FirstDate, result.LastDate)
 			result.ExpectedRecords = expectedCount
-			
+
 			// 检查缺失的交易日
 			dataDateSet := make(map[string]bool)
 			for _, k := range data {
 				dataDateSet[k.Date] = true
 			}
-			
+
 			gaps := 0
 			for _, date := range tradeDates {
 				if date >= result.FirstDate && date <= result.LastDate {
@@ -779,25 +779,25 @@ func (s *KlineCacheService) CheckDataIntegrity(symbol, period, adjust string) (*
 				}
 			}
 			result.TradeDateGaps = gaps
-			
+
 			if gaps > 5 {
 				result.Issues = append(result.Issues, fmt.Sprintf("... and %d more missing dates", gaps-5))
 			}
 		}
 	}
-	
+
 	// 3. 计算完整度
 	if result.ExpectedRecords > 0 {
 		result.CompletenessPct = float64(result.TotalRecords) / float64(result.ExpectedRecords) * 100
 	} else {
 		result.CompletenessPct = 100.0
 	}
-	
+
 	// 4. 判断数据是否完整
 	result.IsComplete = result.CompletenessPct >= 95.0 && result.MissingFields == 0 && result.TradeDateGaps <= 2
-	
+
 	result.LastVerifiedAt = time.Now()
-	
+
 	return result, nil
 }
 
@@ -817,17 +817,17 @@ func (s *KlineCacheService) BatchCheckIntegrity(symbols []string, period, adjust
 	results := make(map[string]*DataIntegrityCheck)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	semaphore := make(chan struct{}, 10)
-	
+
 	for _, symbol := range symbols {
 		wg.Add(1)
 		go func(sym string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			check, err := s.CheckDataIntegrity(sym, period, adjust)
 			if err != nil {
 				log.Printf("[KlineCache] Integrity check failed for %s: %v", sym, err)
@@ -838,13 +838,13 @@ func (s *KlineCacheService) BatchCheckIntegrity(symbols []string, period, adjust
 					Issues: []string{fmt.Sprintf("Check failed: %v", err)},
 				}
 			}
-			
+
 			mu.Lock()
 			results[sym] = check
 			mu.Unlock()
 		}(symbol)
 	}
-	
+
 	wg.Wait()
 	return results
 }
@@ -852,28 +852,28 @@ func (s *KlineCacheService) BatchCheckIntegrity(symbols []string, period, adjust
 // RepairData 修复指定股票的数据（强制刷新）
 func (s *KlineCacheService) RepairData(ctx context.Context, symbol, period, adjust string) error {
 	log.Printf("[KlineCache] Repairing data for %s_%s_%s", symbol, period, adjust)
-	
+
 	// 1. 清除旧缓存
 	if err := s.ClearCache(symbol, period, adjust); err != nil {
 		return fmt.Errorf("failed to clear cache: %w", err)
 	}
-	
+
 	// 2. 重新获取数据
 	_, err := s.GetHistoryKline(ctx, symbol, period, adjust, "", "")
 	if err != nil {
 		return fmt.Errorf("failed to refetch data: %w", err)
 	}
-	
+
 	// 3. 验证修复结果
 	check, err := s.CheckDataIntegrity(symbol, period, adjust)
 	if err != nil {
 		return fmt.Errorf("failed to verify repair: %w", err)
 	}
-	
+
 	if !check.IsComplete {
 		return fmt.Errorf("data still incomplete after repair: %v", check.Issues)
 	}
-	
+
 	log.Printf("[KlineCache] Data repaired successfully for %s", symbol)
 	return nil
 }
@@ -889,7 +889,7 @@ func (s *KlineCacheService) GetIncompleteDataList(period, adjust string, thresho
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var symbols []string
 	for rows.Next() {
 		var symbol string
@@ -898,11 +898,11 @@ func (s *KlineCacheService) GetIncompleteDataList(period, adjust string, thresho
 		}
 		symbols = append(symbols, symbol)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	
+
 	// 检查每个股票的数据完整性
 	var incomplete []string
 	for _, symbol := range symbols {
@@ -914,7 +914,7 @@ func (s *KlineCacheService) GetIncompleteDataList(period, adjust string, thresho
 			incomplete = append(incomplete, symbol)
 		}
 	}
-	
+
 	return incomplete, nil
 }
 
@@ -923,37 +923,37 @@ func (s *KlineCacheService) GetIncompleteDataList(period, adjust string, thresho
 // GetCacheStats 获取缓存统计
 func (s *KlineCacheService) GetCacheStats() map[string]interface{} {
 	stats := make(map[string]interface{})
-	
+
 	// 内存缓存统计
 	s.memCacheMutex.RLock()
 	stats["memory_entries"] = len(s.memCache)
 	s.memCacheMutex.RUnlock()
-	
+
 	// 数据库统计
 	var totalCount int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM kline_metadata").Scan(&totalCount)
 	if err == nil {
 		stats["db_stocks"] = totalCount
 	}
-	
+
 	var totalRecords int
 	err = s.db.QueryRow("SELECT COUNT(*) FROM kline_data").Scan(&totalRecords)
 	if err == nil {
 		stats["db_records"] = totalRecords
 	}
-	
+
 	return stats
 }
 
 // ClearCache 清除指定股票的缓存
 func (s *KlineCacheService) ClearCache(symbol, period, adjust string) error {
 	key := cacheKey(symbol, period, adjust)
-	
+
 	// 清除内存缓存
 	s.memCacheMutex.Lock()
 	delete(s.memCache, key)
 	s.memCacheMutex.Unlock()
-	
+
 	// 清除数据库缓存
 	_, err := s.db.Exec(`
 		DELETE FROM kline_data WHERE symbol = ? AND period = ? AND adjust = ?
@@ -961,11 +961,11 @@ func (s *KlineCacheService) ClearCache(symbol, period, adjust string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = s.db.Exec(`
 		DELETE FROM kline_metadata WHERE symbol = ? AND period = ? AND adjust = ?
 	`, symbol, period, adjust)
-	
+
 	return err
 }
 
@@ -975,13 +975,13 @@ func (s *KlineCacheService) ClearAllCache() error {
 	s.memCacheMutex.Lock()
 	s.memCache = make(map[string]*klineCacheEntry)
 	s.memCacheMutex.Unlock()
-	
+
 	// 清除数据库缓存
 	_, err := s.db.Exec("DELETE FROM kline_data")
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = s.db.Exec("DELETE FROM kline_metadata")
 	return err
 }

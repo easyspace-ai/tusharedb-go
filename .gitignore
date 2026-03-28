@@ -12,3 +12,8 @@ data/
 tmp/
 *.duckdb
 *.duckdb.wal
+test/
+test
+
+demo_data/
+demo_data

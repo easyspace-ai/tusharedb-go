@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/pkg/realtimedata"
+	"github.com/easyspace-ai/stock_api/pkg/realtimedata"
 )
 
 var reArtCode = regexp.MustCompile(`(?i)art[_-]?code=([^&]+)`)

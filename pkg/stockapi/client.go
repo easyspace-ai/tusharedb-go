@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 type Client struct {

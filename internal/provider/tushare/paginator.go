@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 func (c *Client) FetchAllPages(ctx context.Context, req provider.Request) (*provider.Response, error) {

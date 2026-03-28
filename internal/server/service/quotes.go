@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 // QuotesService 行情服务
 type QuotesService struct {
-	client      *stocksdk.Client
-	cacheSvc    *CacheService
+	client   *stocksdk.Client
+	cacheSvc *CacheService
 }
 
 // NewQuotesService 创建行情服务
@@ -36,47 +36,47 @@ func (s *QuotesService) GetAllAShareQuotes(ctx context.Context) ([]stocksdk.Full
 	if s.cacheSvc != nil {
 		return s.cacheSvc.GetAllAShareQuotes(ctx)
 	}
-	
+
 	// 降级：直接从 StockSDK 获取
 	codes, err := s.client.GetAShareCodeList(ctx, false, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get A-share codes: %w", err)
 	}
-	
+
 	// 分批获取行情，每批400只
 	const batchSize = 400
 	var allQuotes []stocksdk.FullQuote
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	// 限制并发数
 	semaphore := make(chan struct{}, 5)
-	
+
 	for i := 0; i < len(codes); i += batchSize {
 		end := i + batchSize
 		if end > len(codes) {
 			end = len(codes)
 		}
 		batch := codes[i:end]
-		
+
 		wg.Add(1)
 		go func(batchCodes []string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			quotes, err := s.client.GetFullQuotes(ctx, batchCodes)
 			if err != nil {
 				return
 			}
-			
+
 			mu.Lock()
 			allQuotes = append(allQuotes, quotes...)
 			mu.Unlock()
 		}(batch)
 	}
-	
+
 	wg.Wait()
 	return allQuotes, nil
 }
@@ -90,41 +90,41 @@ func (s *QuotesService) GetAllAShareQuotesWithProgress(
 	if s.cacheSvc != nil {
 		return s.cacheSvc.GetAllAShareQuotesWithProgress(ctx, onProgress)
 	}
-	
+
 	// 降级处理：直接从 StockSDK 获取
 	codes, err := s.client.GetAShareCodeList(ctx, false, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get A-share codes: %w", err)
 	}
-	
+
 	total := len(codes)
 	const batchSize = 400
 	var allQuotes []stocksdk.FullQuote
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	
+
 	semaphore := make(chan struct{}, 5)
 	completed := 0
-	
+
 	for i := 0; i < len(codes); i += batchSize {
 		end := i + batchSize
 		if end > len(codes) {
 			end = len(codes)
 		}
 		batch := codes[i:end]
-		
+
 		wg.Add(1)
 		go func(batchCodes []string) {
 			defer wg.Done()
-			
+
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			
+
 			quotes, err := s.client.GetFullQuotes(ctx, batchCodes)
 			if err != nil {
 				return
 			}
-			
+
 			mu.Lock()
 			allQuotes = append(allQuotes, quotes...)
 			completed += len(batchCodes)
@@ -134,7 +134,7 @@ func (s *QuotesService) GetAllAShareQuotesWithProgress(
 			mu.Unlock()
 		}(batch)
 	}
-	
+
 	wg.Wait()
 	return allQuotes, nil
 }

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 // Client 是 StockSDK API 客户端

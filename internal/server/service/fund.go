@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 // FundService 资金服务

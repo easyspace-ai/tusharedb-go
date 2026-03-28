@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 // Client 是 Tushare API 客户端

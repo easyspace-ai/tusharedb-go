@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/config"
-	"github.com/easyspace-ai/tusharedb-go/internal/dataset"
-	_ "github.com/easyspace-ai/tusharedb-go/internal/dataset/builtin"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/tushare"
-	"github.com/easyspace-ai/tusharedb-go/internal/query/duckdb"
-	"github.com/easyspace-ai/tusharedb-go/internal/storage/meta"
-	"github.com/easyspace-ai/tusharedb-go/internal/syncer"
+	"github.com/easyspace-ai/stock_api/internal/config"
+	"github.com/easyspace-ai/stock_api/internal/dataset"
+	_ "github.com/easyspace-ai/stock_api/internal/dataset/builtin"
+	"github.com/easyspace-ai/stock_api/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/tushare"
+	"github.com/easyspace-ai/stock_api/internal/query/duckdb"
+	"github.com/easyspace-ai/stock_api/internal/storage/meta"
+	"github.com/easyspace-ai/stock_api/internal/syncer"
 )
 
 // Client 是 TushareDB 的主客户端

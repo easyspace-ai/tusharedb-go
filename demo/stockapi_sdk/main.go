@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/pkg/stockapi"
+	"github.com/easyspace-ai/stock_api/pkg/stockapi"
 )
 
 func main() {

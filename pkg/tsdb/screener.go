@@ -3,7 +3,7 @@ package tsdb
 import (
 	"context"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/query/duckdb"
+	"github.com/easyspace-ai/stock_api/internal/query/duckdb"
 )
 
 type Screener struct {

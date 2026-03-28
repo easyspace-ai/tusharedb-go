@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 func main() {
@@ -28,10 +28,10 @@ func main() {
 	} else {
 		fmt.Printf("✓ 获取到 %d 条简要行情\n", len(simpleQuotes))
 		for _, quote := range simpleQuotes {
-		fmt.Printf("  - %s (%s): 价格=%.2f, 涨跌=%.2f%%\n",
-			quote.Name, quote.Code, quote.Price, quote.ChangePct)
+			fmt.Printf("  - %s (%s): 价格=%.2f, 涨跌=%.2f%%\n",
+				quote.Name, quote.Code, quote.Price, quote.ChangePct)
+		}
 	}
-}
 	fmt.Println()
 
 	// 测试 2: 获取交易日历

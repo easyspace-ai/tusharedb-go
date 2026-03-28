@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 // ValidateDailyKlineHistory checks daily K-line completeness (non-fatal warnings).

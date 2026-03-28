@@ -3,8 +3,8 @@ package tsdb
 import (
 	"errors"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/frame"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/frame"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 type AdjustType string

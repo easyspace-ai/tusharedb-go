@@ -1,6 +1,6 @@
 package builtin
 
-import "github.com/easyspace-ai/tusharedb-go/internal/dataset"
+import "github.com/easyspace-ai/stock_api/internal/dataset"
 
 func datasetRegister(spec dataset.Spec) {
 	specCopy := spec

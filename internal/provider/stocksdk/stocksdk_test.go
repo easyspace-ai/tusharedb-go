@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 // TestClientImplementsDataProvider 验证 Client 是否实现了 DataProvider 接口
@@ -296,13 +296,13 @@ func TestGetFuturesMarketCode(t *testing.T) {
 		expected int
 		wantErr  bool
 	}{
-		{"rb", 113, false},   // SHFE
-		{"IF", 220, false},   // CFFEX
-		{"c", 114, false},    // DCE
-		{"TA", 115, false},   // CZCE
-		{"sc", 142, false},   // INE
-		{"si", 225, false},   // GFEX
-		{"XXX", 0, true},     // Unknown
+		{"rb", 113, false}, // SHFE
+		{"IF", 220, false}, // CFFEX
+		{"c", 114, false},  // DCE
+		{"TA", 115, false}, // CZCE
+		{"sc", 142, false}, // INE
+		{"si", 225, false}, // GFEX
+		{"XXX", 0, true},   // Unknown
 	}
 
 	for _, tt := range tests {

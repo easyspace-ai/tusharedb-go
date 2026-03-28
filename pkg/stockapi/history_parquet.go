@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 	goparquet "github.com/parquet-go/parquet-go"
 )
 

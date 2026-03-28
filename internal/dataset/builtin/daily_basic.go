@@ -1,8 +1,8 @@
 package builtin
 
 import (
-	"github.com/easyspace-ai/tusharedb-go/internal/dataset"
-	"github.com/easyspace-ai/tusharedb-go/internal/provider"
+	"github.com/easyspace-ai/stock_api/internal/dataset"
+	"github.com/easyspace-ai/stock_api/internal/provider"
 )
 
 func init() {

@@ -17,7 +17,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/easyspace-ai/tusharedb-go/pkg/realtimedata"
+	"github.com/easyspace-ai/stock_api/pkg/realtimedata"
 )
 
 func main() {

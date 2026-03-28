@@ -1,4 +1,4 @@
-module github.com/easyspace-ai/tusharedb-go
+module github.com/easyspace-ai/stock_api
 
 go 1.25.1
 

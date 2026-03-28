@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 // BoardService 板块服务
@@ -49,7 +49,7 @@ func (s *BoardService) GetIndustryKline(ctx context.Context, code, period string
 	default:
 		klinePeriod = stocksdk.KlinePeriodDaily
 	}
-	
+
 	return s.client.GetIndustryKline(ctx, code, &stocksdk.BoardKlineOptions{
 		Period: klinePeriod,
 	})
@@ -66,7 +66,7 @@ func (s *BoardService) GetConceptKline(ctx context.Context, code, period string)
 	default:
 		klinePeriod = stocksdk.KlinePeriodDaily
 	}
-	
+
 	return s.client.GetConceptKline(ctx, code, &stocksdk.BoardKlineOptions{
 		Period: klinePeriod,
 	})
@@ -89,29 +89,29 @@ func (s *BoardService) SearchBoard(ctx context.Context, keyword string) ([]stock
 	if err != nil {
 		return nil, fmt.Errorf("failed to get industry list: %w", err)
 	}
-	
+
 	concepts, err := s.client.GetConceptList(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get concept list: %w", err)
 	}
-	
+
 	// 合并并过滤
 	keyword = strings.ToLower(keyword)
 	var results []stocksdk.IndustryBoard
-	
+
 	for _, board := range industries {
 		if strings.Contains(strings.ToLower(board.Name), keyword) ||
 			strings.Contains(strings.ToLower(board.Code), keyword) {
 			results = append(results, board)
 		}
 	}
-	
+
 	for _, board := range concepts {
 		if strings.Contains(strings.ToLower(board.Name), keyword) ||
 			strings.Contains(strings.ToLower(board.Code), keyword) {
 			results = append(results, board)
 		}
 	}
-	
+
 	return results, nil
 }

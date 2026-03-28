@@ -6,13 +6,13 @@ import (
 	"log"
 	"strings"
 
-	"github.com/easyspace-ai/tusharedb-go/internal/provider/stocksdk"
+	"github.com/easyspace-ai/stock_api/internal/provider/stocksdk"
 )
 
 // KlineService K线服务
 type KlineService struct {
-	client      *stocksdk.Client
-	cache       *KlineCacheService
+	client *stocksdk.Client
+	cache  *KlineCacheService
 }
 
 // NewKlineService 创建K线服务
@@ -29,7 +29,7 @@ func (s *KlineService) GetHistoryKline(ctx context.Context, symbol, period, adju
 	if s.cache != nil {
 		return s.cache.GetHistoryKline(ctx, symbol, period, adjust, startDate, endDate)
 	}
-	
+
 	// 无缓存时直接调用API（降级）
 	log.Printf("[KlineService] No cache available, fetching directly from API: %s", symbol)
 	return s.fetchFromAPI(ctx, symbol, period, adjust, startDate, endDate)
@@ -51,7 +51,7 @@ func (s *KlineService) GetMinuteKline(ctx context.Context, symbol, period, adjus
 	default:
 		minutePeriod = stocksdk.MinutePeriod1
 	}
-	
+
 	// 标准化复权类型
 	var adjustType stocksdk.AdjustType
 	switch adjust {
@@ -62,7 +62,7 @@ func (s *KlineService) GetMinuteKline(ctx context.Context, symbol, period, adjus
 	default:
 		adjustType = stocksdk.AdjustTypeNone
 	}
-	
+
 	// 设置默认日期范围
 	if startDate == "" {
 		startDate = "19700101"
@@ -70,7 +70,7 @@ func (s *KlineService) GetMinuteKline(ctx context.Context, symbol, period, adjus
 	if endDate == "" {
 		endDate = "20500101"
 	}
-	
+
 	return s.client.GetMinuteKline(ctx, symbol, &stocksdk.MinuteKlineOptions{
 		Period:    minutePeriod,
 		Adjust:    adjustType,
@@ -89,7 +89,7 @@ func (s *KlineService) BatchGetKline(ctx context.Context, symbols []string, peri
 	if s.cache != nil {
 		return s.cache.BatchGetKline(ctx, symbols, period, adjust, minDays)
 	}
-	
+
 	// 无缓存时的降级处理
 	results := make(map[string][]stocksdk.HistoryKline)
 	for _, symbol := range symbols {
@@ -172,7 +172,7 @@ func (s *KlineService) fetchFromAPI(ctx context.Context, symbol, period, adjust,
 	default:
 		klinePeriod = stocksdk.KlinePeriodDaily
 	}
-	
+
 	var adjustType stocksdk.AdjustType
 	switch adjust {
 	case "qfq":
@@ -182,14 +182,14 @@ func (s *KlineService) fetchFromAPI(ctx context.Context, symbol, period, adjust,
 	default:
 		adjustType = stocksdk.AdjustTypeNone
 	}
-	
+
 	if startDate == "" {
 		startDate = "19700101"
 	}
 	if endDate == "" {
 		endDate = "20500101"
 	}
-	
+
 	return s.client.GetHistoryKline(ctx, symbol, &stocksdk.HistoryKlineOptions{
 		Period:    klinePeriod,
 		Adjust:    adjustType,
