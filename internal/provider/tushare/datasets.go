@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/easyspace-ai/tusharedb-go/internal/provider"
 )
@@ -78,6 +79,41 @@ func (c *Client) FetchDailyRange(ctx context.Context, startDate, endDate string)
 	return decodeRows[provider.DailyRow](resp.Rows)
 }
 
+// FetchDailyRangeForSymbols 按股票列表 + 日期范围拉取日线（避免整段日期全市场 daily）。
+func (c *Client) FetchDailyRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]provider.DailyRow, error) {
+	if len(tsCodes) == 0 {
+		return nil, nil
+	}
+	var all []provider.DailyRow
+	for _, ts := range tsCodes {
+		ts = strings.TrimSpace(ts)
+		if ts == "" {
+			continue
+		}
+		resp, err := c.Fetch(ctx, provider.Request{
+			APIName: "daily",
+			Params: map[string]any{
+				"ts_code":    ts,
+				"start_date": startDate,
+				"end_date":   endDate,
+			},
+			Fields: []string{
+				"ts_code", "trade_date", "open", "high", "low", "close",
+				"pre_close", "change", "pct_chg", "vol", "amount",
+			},
+		}, provider.FetchModePaged)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ts, err)
+		}
+		rows, err := decodeRows[provider.DailyRow](resp.Rows)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, rows...)
+	}
+	return all, nil
+}
+
 // FetchAdjFactor 获取复权因子数据（按 trade_date 横截面抓取）
 func (c *Client) FetchAdjFactor(ctx context.Context, tradeDate string) ([]provider.AdjFactorRow, error) {
 	resp, err := c.Fetch(ctx, provider.Request{
@@ -107,6 +143,38 @@ func (c *Client) FetchAdjFactorRange(ctx context.Context, startDate, endDate str
 		return nil, err
 	}
 	return decodeRows[provider.AdjFactorRow](resp.Rows)
+}
+
+// FetchAdjFactorRangeForSymbols 按股票列表 + 日期范围拉取复权因子。
+func (c *Client) FetchAdjFactorRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]provider.AdjFactorRow, error) {
+	if len(tsCodes) == 0 {
+		return nil, nil
+	}
+	var all []provider.AdjFactorRow
+	for _, ts := range tsCodes {
+		ts = strings.TrimSpace(ts)
+		if ts == "" {
+			continue
+		}
+		resp, err := c.Fetch(ctx, provider.Request{
+			APIName: "adj_factor",
+			Params: map[string]any{
+				"ts_code":    ts,
+				"start_date": startDate,
+				"end_date":   endDate,
+			},
+			Fields: []string{"ts_code", "trade_date", "adj_factor"},
+		}, provider.FetchModePaged)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ts, err)
+		}
+		rows, err := decodeRows[provider.AdjFactorRow](resp.Rows)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, rows...)
+	}
+	return all, nil
 }
 
 // FetchDailyBasic 获取每日基本面指标数据（按 trade_date 横截面抓取）

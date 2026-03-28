@@ -256,6 +256,49 @@ func (c *Client) FetchDailyRange(ctx context.Context, startDate, endDate string)
 	return results, nil
 }
 
+// FetchDailyRangeForSymbols 仅拉取指定 Tushare 格式 ts_code 的日线（单股 GetHistoryKline），
+// 供 UnifiedClient 按标的补数时使用，避免 FetchDailyRange 全市场遍历。
+func (c *Client) FetchDailyRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]provider.DailyRow, error) {
+	if len(tsCodes) == 0 {
+		return nil, nil
+	}
+	var results []provider.DailyRow
+	for i, raw := range tsCodes {
+		tsCode := NormalizeTSCode(strings.TrimSpace(raw))
+		if tsCode == "" {
+			continue
+		}
+		klines, err := c.GetHistoryKline(ctx, tsCode, &HistoryKlineOptions{
+			Period:    KlinePeriodDaily,
+			Adjust:    AdjustTypeNone,
+			StartDate: startDate,
+			EndDate:   endDate,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", tsCode, err)
+		}
+		for _, k := range klines {
+			results = append(results, provider.DailyRow{
+				TSCode:    NormalizeTSCode(k.Code),
+				TradeDate: CompactDate(k.Date),
+				Open:      safeFloatFromPtr(k.Open),
+				High:      safeFloatFromPtr(k.High),
+				Low:       safeFloatFromPtr(k.Low),
+				Close:     safeFloatFromPtr(k.Close),
+				PreClose:  0,
+				Change:    safeFloatFromPtr(k.Change),
+				PctChg:    safeFloatFromPtr(k.ChangePercent),
+				Vol:       safeFloatFromPtr(k.Volume),
+				Amount:    safeFloatFromPtr(k.Amount),
+			})
+		}
+		if i < len(tsCodes)-1 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	return results, nil
+}
+
 // ============= provider.AdjFactorProvider 接口实现 =============
 
 // FetchAdjFactor 获取复权因子（单个交易日横截面）
@@ -447,6 +490,55 @@ func (c *Client) FetchAdjFactorRange(ctx context.Context, startDate, endDate str
 	return results, nil
 }
 
+// FetchAdjFactorRangeForSymbols 仅为指定 ts_code 计算复权因子（不复权 vs 后复权 K 线比值），避免全市场遍历。
+func (c *Client) FetchAdjFactorRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]provider.AdjFactorRow, error) {
+	if len(tsCodes) == 0 {
+		return nil, nil
+	}
+	var results []provider.AdjFactorRow
+	for i, raw := range tsCodes {
+		tsCode := NormalizeTSCode(strings.TrimSpace(raw))
+		if tsCode == "" {
+			continue
+		}
+		klinesNone, err := c.GetHistoryKline(ctx, tsCode, &HistoryKlineOptions{
+			Period:    KlinePeriodDaily,
+			Adjust:    AdjustTypeNone,
+			StartDate: startDate,
+			EndDate:   endDate,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", tsCode, err)
+		}
+		klinesHFQ, err := c.GetHistoryKline(ctx, tsCode, &HistoryKlineOptions{
+			Period:    KlinePeriodDaily,
+			Adjust:    AdjustTypeHFQ,
+			StartDate: startDate,
+			EndDate:   endDate,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("%s hfq: %w", tsCode, err)
+		}
+		for j, k := range klinesNone {
+			if j < len(klinesHFQ) {
+				noneClose := safeFloatFromPtr(k.Close)
+				hfqClose := safeFloatFromPtr(klinesHFQ[j].Close)
+				if noneClose > 0 {
+					results = append(results, provider.AdjFactorRow{
+						TSCode:    NormalizeTSCode(tsCode),
+						TradeDate: CompactDate(k.Date),
+						AdjFactor: hfqClose / noneClose,
+					})
+				}
+			}
+		}
+		if i < len(tsCodes)-1 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	return results, nil
+}
+
 // ============= provider.DailyBasicProvider 接口实现 =============
 
 // FetchDailyBasic 获取每日指标（单个交易日横截面）
@@ -604,11 +696,11 @@ func (c *Client) FetchDailyBasicRange(ctx context.Context, startDate, endDate st
 
 // 板块代码缓存
 var (
-	industryCodeCache      = make(map[string]string)
-	conceptCodeCache       = make(map[string]string)
-	industryListCache      []IndustryBoard
-	conceptListCache       []ConceptBoard
-	boardCacheMutex        sync.RWMutex
+	industryCodeCache = make(map[string]string)
+	conceptCodeCache  = make(map[string]string)
+	industryListCache []IndustryBoard
+	conceptListCache  []ConceptBoard
+	boardCacheMutex   sync.RWMutex
 )
 
 // GetFullQuotes 获取 A 股 / 指数 全量行情

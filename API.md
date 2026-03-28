@@ -4,6 +4,8 @@
 
 ## 目录
 
+> **第三方 / 实时行情**：见 [docs/THIRD_PARTY_API.md](docs/THIRD_PARTY_API.md)（`pkg/realtimedata` 全量方法、参数、返回字段及与 Stock-AI 对照）。
+
 1. [Provider 层](#provider-层) - 数据源接入
 2. [Syncer 层](#syncer-层) - 数据同步
 3. [Engine 层](#engine-层) - 本地查询引擎

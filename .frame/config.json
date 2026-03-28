@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "name": "stockdb",
+  "description": "",
+  "createdAt": "2026-03-26T14:55:23.549Z",
+  "initializedBy": "Frame",
+  "settings": {
+    "autoUpdateStructure": true,
+    "autoUpdateNotes": false,
+    "taskRecognition": true
+  },
+  "files": {
+    "agents": "AGENTS.md",
+    "claudeSymlink": "CLAUDE.md",
+    "structure": "STRUCTURE.json",
+    "notes": "PROJECT_NOTES.md",
+    "tasks": "tasks.json",
+    "quickstart": "QUICKSTART.md"
+  }
+}

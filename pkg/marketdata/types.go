@@ -141,6 +141,8 @@ type GlobalIndex struct {
 	Change     float64 `json:"change"`
 	ChangePct  float64 `json:"changePct"`
 	UpdateTime string  `json:"updateTime"`
+	// Region is the upstream board key: common | america | asia | europe | other
+	Region string `json:"region"`
 }
 
 type InvestCalendarItem struct {

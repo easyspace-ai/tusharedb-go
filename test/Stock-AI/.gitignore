@@ -1,0 +1,44 @@
+# Build output
+build/bin
+*.exe
+
+# Dependencies
+node_modules
+frontend/node_modules
+
+# Frontend build
+frontend/dist
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database (if accidentally placed in project)
+*.db
+*.sqlite
+*.sqlite3
+
+# Config files with sensitive data
+config.json
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Test files
+*.exe~
+test_*.exe
+nul
+
+# Temporary files
+*.tmp
+*.temp

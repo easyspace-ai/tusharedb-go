@@ -261,17 +261,17 @@ func (c *UnifiedClient) GetMultipleStocksDaily(ctx context.Context, tsCodes []st
 		if err == nil && c.checkDailyDataComplete(df, tsCodes, startDate, endDate) {
 			return df, nil
 		}
-		// 数据不完整，需要同步
-		if err := c.syncer.SyncDatasetRange(ctx, "daily", startDate, endDate); err != nil {
+		// 数据不完整：仅同步请求的股票，避免 StockSDK FetchDailyRange 全市场拉取
+		if err := c.syncer.SyncDailyForSymbols(ctx, tsCodes, startDate, endDate); err != nil {
 			// 同步失败但本地有数据，返回本地数据
 			if df != nil && len(df.Rows) > 0 {
 				return df, nil
 			}
 			return nil, fmt.Errorf("sync daily failed: %w", err)
 		}
-		// 如果涉及复权，同步复权因子
+		// 如果涉及复权，仅同步相关股票的复权因子（避免 StockSDK 全市场 FetchAdjFactorRange）
 		if adjust != AdjustNone {
-			if err := c.syncer.SyncDatasetRange(ctx, "adj_factor", startDate, endDate); err != nil {
+			if err := c.syncer.SyncAdjFactorForSymbols(ctx, tsCodes, startDate, endDate); err != nil {
 				// 非致命错误，继续
 			}
 		}
@@ -430,20 +430,29 @@ func (c *UnifiedClient) fetchTradeCalendarFromNetwork(ctx context.Context, filte
 }
 
 func (c *UnifiedClient) fetchDailyFromNetwork(ctx context.Context, tsCodes []string, startDate, endDate string, adjust AdjustType) (*DataFrame, error) {
-	rows, err := c.primaryProvider.FetchDailyRange(ctx, startDate, endDate)
+	var rows []provider.DailyRow
+	var err error
+	if p, ok := c.primaryProvider.(provider.ScopedDailyQuoteProvider); ok {
+		rows, err = p.FetchDailyRangeForSymbols(ctx, tsCodes, startDate, endDate)
+	} else {
+		rows, err = c.primaryProvider.FetchDailyRange(ctx, startDate, endDate)
+	}
 	if err != nil && c.fallbackProvider != nil {
-		rows, err = c.fallbackProvider.FetchDailyRange(ctx, startDate, endDate)
+		if p2, ok2 := c.fallbackProvider.(provider.ScopedDailyQuoteProvider); ok2 {
+			rows, err = p2.FetchDailyRangeForSymbols(ctx, tsCodes, startDate, endDate)
+		} else {
+			rows, err = c.fallbackProvider.FetchDailyRange(ctx, startDate, endDate)
+		}
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	// 过滤指定股票
-	filtered := make([]provider.DailyRow, 0, len(rows))
 	codeSet := make(map[string]bool)
 	for _, code := range tsCodes {
 		codeSet[code] = true
 	}
+	filtered := make([]provider.DailyRow, 0, len(rows))
 	for _, row := range rows {
 		if codeSet[row.TSCode] {
 			filtered = append(filtered, row)
@@ -473,15 +482,24 @@ func (c *UnifiedClient) fetchDailyFromNetwork(ctx context.Context, tsCodes []str
 }
 
 func (c *UnifiedClient) fetchAdjFactorFromNetwork(ctx context.Context, tsCode, startDate, endDate string) (*DataFrame, error) {
-	rows, err := c.primaryProvider.FetchAdjFactorRange(ctx, startDate, endDate)
+	var rows []provider.AdjFactorRow
+	var err error
+	if p, ok := c.primaryProvider.(provider.ScopedAdjFactorProvider); ok {
+		rows, err = p.FetchAdjFactorRangeForSymbols(ctx, []string{tsCode}, startDate, endDate)
+	} else {
+		rows, err = c.primaryProvider.FetchAdjFactorRange(ctx, startDate, endDate)
+	}
 	if err != nil && c.fallbackProvider != nil {
-		rows, err = c.fallbackProvider.FetchAdjFactorRange(ctx, startDate, endDate)
+		if p2, ok2 := c.fallbackProvider.(provider.ScopedAdjFactorProvider); ok2 {
+			rows, err = p2.FetchAdjFactorRangeForSymbols(ctx, []string{tsCode}, startDate, endDate)
+		} else {
+			rows, err = c.fallbackProvider.FetchAdjFactorRange(ctx, startDate, endDate)
+		}
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	// 过滤指定股票
 	filtered := make([]provider.AdjFactorRow, 0, len(rows))
 	for _, row := range rows {
 		if row.TSCode == tsCode {

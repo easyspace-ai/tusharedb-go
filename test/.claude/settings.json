@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"http://localhost:8787/api/tdx/kline-all/ths?code=600591&type=day\")",
+      "Bash(curl -s \"http://localhost:8787/api/tdx/codes?exchange=sh\")",
+      "Bash(curl -s \"http://localhost:8787/api/tdx/search?keyword=60059\")",
+      "Bash(python3 scripts/tdx_data_fetcher.py --symbol 600590 --market cn)",
+      "Bash(python3 scripts/tdx_data_fetcher.py --symbol 000001 --market cn --mode both)",
+      "Bash(curl -s \"http://localhost:8787/api/tdx/index?code=sh000001&type=day\")",
+      "Bash(python3 scripts/tdx_chart_generator.py --symbol 000001 --market cn --output-dir /Users/leven/space/hein/stockdb/test/stock-analysis-tdx/outputs/charts)",
+      "Bash(python3 scripts/tdx_chart_generator.py --symbol 000001 --market cn --output-dir outputs/charts)",
+      "Bash(python3 scripts/generate_simple_report.py --data outputs/report_data.json --output outputs/report.html)"
+    ]
+  }
+}

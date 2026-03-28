@@ -1,0 +1,46 @@
+{
+  "company_name": "平安银行",
+  "symbol": "000001",
+  "analysis_date": "2026-03-27",
+  "risk_level": "中等风险",
+  "risk_score": 5,
+  "one_line_summary": "基于技术指标分析，该股当前处于反弹阶段，MACD出现金叉信号，建议谨慎关注",
+  "recommendation": "观望",
+  "expected_return": "+5%",
+  "max_risk": "-8%",
+  "industry": "银行",
+  "market_cap": "N/A",
+  "current_price": "11.02 CNY",
+  "fundamental_score": 6,
+  "overall_risk_score": 5,
+  "financial_indicators": [
+    {"metric": "PE Ratio", "value": "N/A", "rating": "中性"},
+    {"metric": "PB Ratio", "value": "N/A", "rating": "中性"},
+    {"metric": "MA5", "value": "10.80", "rating": "良好"},
+    {"metric": "MA20", "value": "10.85", "rating": "中性"}
+  ],
+  "charts": [
+    {"type": "price_chart", "filename": "000001_price_chart.png"},
+    {"type": "candlestick", "filename": "000001_candlestick.png"},
+    {"type": "macd", "filename": "000001_macd.png"},
+    {"type": "rsi", "filename": "000001_rsi.png"}
+  ],
+  "fundamental_details": [
+    {"dimension": "财务健康", "score": 6, "description": "基础财务指标正常"},
+    {"dimension": "盈利能力", "score": 5, "description": "行业平均水平"},
+    {"dimension": "偿债能力", "score": 7, "description": "流动性良好"},
+    {"dimension": "成长能力", "score": 5, "description": "稳定增长"}
+  ],
+  "risk_details": [
+    {"dimension": "市场风险", "score": 5, "weight": 0.3},
+    {"dimension": "行业风险", "score": 4, "weight": 0.25},
+    {"dimension": "技术风险", "score": 6, "weight": 0.25},
+    {"dimension": "流动性风险", "score": 5, "weight": 0.2}
+  ],
+  "trading_points": [
+    {"action": "买入", "price_range": "10.50-10.80", "reason": "接近MA60支撑位", "position": "30%"},
+    {"action": "观望建议", "price_range": "10.80-11.50", "reason": "震荡整理阶段", "position": "0%"},
+    {"action": "卖出", "price_range": "11.50-12.00", "reason": "前期高点压力", "position": "100%"},
+    {"action": "止损", "price_range": "10.00以下", "reason": "跌破关键支撑", "position": "100%"}
+  ]
+}

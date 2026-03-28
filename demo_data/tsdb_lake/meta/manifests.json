@@ -1,0 +1,20 @@
+{
+  "daily": {
+    "dataset": "daily",
+    "files": [
+      "demo_data/tsdb_lake/lake/daily/part-1774614649015178000.parquet"
+    ]
+  },
+  "stock_basic": {
+    "dataset": "stock_basic",
+    "files": [
+      "demo_data/tsdb_lake/lake/stock_basic/list_status=L/part-1774606305517958000.parquet"
+    ]
+  },
+  "trade_cal": {
+    "dataset": "trade_cal",
+    "files": [
+      "demo_data/tsdb_lake/lake/trade_cal/part-1774607244601297000.parquet"
+    ]
+  }
+}

@@ -3,6 +3,7 @@ package syncer
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/easyspace-ai/tusharedb-go/internal/dataset"
@@ -90,24 +91,8 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 		if err != nil {
 			return fmt.Errorf("fetch daily: %w", err)
 		}
-		// 按年月分区写入
-		partitions := make(map[string][]provider.DailyRow)
-		for _, row := range rows {
-			if len(row.TradeDate) >= 6 {
-				year := row.TradeDate[:4]
-				month := row.TradeDate[4:6]
-				key := year + "-" + month
-				partitions[key] = append(partitions[key], row)
-			}
-		}
-		for partKey, partRows := range partitions {
-			file, err = parquet.WriteRecords(s.writer, "daily", map[string]string{"partition": partKey}, partRows)
-			if err != nil {
-				return fmt.Errorf("write daily parquet (partition %s): %w", partKey, err)
-			}
-			if err := s.manifests.Append("daily", file); err != nil {
-				return fmt.Errorf("update daily manifest: %w", err)
-			}
+		if err := s.appendDailyRows(rows); err != nil {
+			return err
 		}
 
 	case "adj_factor":
@@ -115,23 +100,8 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 		if err != nil {
 			return fmt.Errorf("fetch adj_factor: %w", err)
 		}
-		partitions := make(map[string][]provider.AdjFactorRow)
-		for _, row := range rows {
-			if len(row.TradeDate) >= 6 {
-				year := row.TradeDate[:4]
-				month := row.TradeDate[4:6]
-				key := year + "-" + month
-				partitions[key] = append(partitions[key], row)
-			}
-		}
-		for partKey, partRows := range partitions {
-			file, err = parquet.WriteRecords(s.writer, "adj_factor", map[string]string{"partition": partKey}, partRows)
-			if err != nil {
-				return fmt.Errorf("write adj_factor parquet (partition %s): %w", partKey, err)
-			}
-			if err := s.manifests.Append("adj_factor", file); err != nil {
-				return fmt.Errorf("update adj_factor manifest: %w", err)
-			}
+		if err := s.appendAdjFactorRows(rows); err != nil {
+			return err
 		}
 
 	case "daily_basic":
@@ -139,6 +109,7 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 		if err != nil {
 			return fmt.Errorf("fetch daily_basic: %w", err)
 		}
+		fmt.Printf("[Sync daily_basic] 正在将 %d 条记录按交易日归因到月份分区…\n", len(rows))
 		partitions := make(map[string][]provider.DailyBasicRow)
 		for _, row := range rows {
 			if len(row.TradeDate) >= 6 {
@@ -148,7 +119,16 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 				partitions[key] = append(partitions[key], row)
 			}
 		}
-		for partKey, partRows := range partitions {
+		partKeys := make([]string, 0, len(partitions))
+		for k := range partitions {
+			partKeys = append(partKeys, k)
+		}
+		sort.Strings(partKeys)
+		fmt.Printf("[Sync daily_basic] 网络拉取结束，共 %d 条记录、%d 个月分区；开始写入 Parquet（无新日志时请等待磁盘与压缩，大区间可能需数分钟）\n",
+			len(rows), len(partKeys))
+		for i, partKey := range partKeys {
+			partRows := partitions[partKey]
+			fmt.Printf("[Sync daily_basic] 落盘 %d/%d：%s（%d 条）\n", i+1, len(partKeys), partKey, len(partRows))
 			file, err = parquet.WriteRecords(s.writer, "daily_basic", map[string]string{"partition": partKey}, partRows)
 			if err != nil {
 				return fmt.Errorf("write daily_basic parquet (partition %s): %w", partKey, err)
@@ -157,6 +137,7 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 				return fmt.Errorf("update daily_basic manifest: %w", err)
 			}
 		}
+		fmt.Printf("[Sync daily_basic] 全部 Parquet 与 manifest 已更新\n")
 
 	default:
 		return fmt.Errorf("range sync not implemented for dataset %q", datasetName)
@@ -168,6 +149,124 @@ func (s *Syncer) SyncDatasetRange(ctx context.Context, datasetName, startDate, e
 		LastSuccessfulAt: time.Now(),
 		SchemaVersion:    "v1",
 	})
+}
+
+// SyncDailyForSymbols 仅为指定股票同步日线并写入分区（用于查询触发补数时避免全市场 FetchDailyRange）。
+func (s *Syncer) SyncDailyForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) error {
+	var rows []provider.DailyRow
+	var err error
+	if p, ok := s.provider.(provider.ScopedDailyQuoteProvider); ok {
+		rows, err = p.FetchDailyRangeForSymbols(ctx, tsCodes, startDate, endDate)
+	} else {
+		rows, err = s.provider.FetchDailyRange(ctx, startDate, endDate)
+		if err != nil {
+			return fmt.Errorf("fetch daily: %w", err)
+		}
+		want := make(map[string]struct{}, len(tsCodes))
+		for _, c := range tsCodes {
+			want[c] = struct{}{}
+		}
+		var filtered []provider.DailyRow
+		for _, row := range rows {
+			if _, ok := want[row.TSCode]; ok {
+				filtered = append(filtered, row)
+			}
+		}
+		rows = filtered
+	}
+	if err != nil {
+		return fmt.Errorf("fetch daily: %w", err)
+	}
+	if err := s.appendDailyRows(rows); err != nil {
+		return err
+	}
+	return s.checkpoint.Put(meta.DatasetCheckpoint{
+		Dataset:          "daily",
+		LastSyncedDate:   endDate,
+		LastSuccessfulAt: time.Now(),
+		SchemaVersion:    "v1",
+	})
+}
+
+// SyncAdjFactorForSymbols 仅为指定股票同步复权因子区间。
+func (s *Syncer) SyncAdjFactorForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) error {
+	var rows []provider.AdjFactorRow
+	var err error
+	if p, ok := s.provider.(provider.ScopedAdjFactorProvider); ok {
+		rows, err = p.FetchAdjFactorRangeForSymbols(ctx, tsCodes, startDate, endDate)
+	} else {
+		rows, err = s.provider.FetchAdjFactorRange(ctx, startDate, endDate)
+		if err != nil {
+			return fmt.Errorf("fetch adj_factor: %w", err)
+		}
+		want := make(map[string]struct{}, len(tsCodes))
+		for _, c := range tsCodes {
+			want[c] = struct{}{}
+		}
+		var filtered []provider.AdjFactorRow
+		for _, row := range rows {
+			if _, ok := want[row.TSCode]; ok {
+				filtered = append(filtered, row)
+			}
+		}
+		rows = filtered
+	}
+	if err != nil {
+		return fmt.Errorf("fetch adj_factor: %w", err)
+	}
+	if err := s.appendAdjFactorRows(rows); err != nil {
+		return err
+	}
+	return s.checkpoint.Put(meta.DatasetCheckpoint{
+		Dataset:          "adj_factor",
+		LastSyncedDate:   endDate,
+		LastSuccessfulAt: time.Now(),
+		SchemaVersion:    "v1",
+	})
+}
+
+func (s *Syncer) appendAdjFactorRows(rows []provider.AdjFactorRow) error {
+	partitions := make(map[string][]provider.AdjFactorRow)
+	for _, row := range rows {
+		if len(row.TradeDate) >= 6 {
+			year := row.TradeDate[:4]
+			month := row.TradeDate[4:6]
+			key := year + "-" + month
+			partitions[key] = append(partitions[key], row)
+		}
+	}
+	for partKey, partRows := range partitions {
+		file, err := parquet.WriteRecords(s.writer, "adj_factor", map[string]string{"partition": partKey}, partRows)
+		if err != nil {
+			return fmt.Errorf("write adj_factor parquet (partition %s): %w", partKey, err)
+		}
+		if err := s.manifests.Append("adj_factor", file); err != nil {
+			return fmt.Errorf("update adj_factor manifest: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *Syncer) appendDailyRows(rows []provider.DailyRow) error {
+	partitions := make(map[string][]provider.DailyRow)
+	for _, row := range rows {
+		if len(row.TradeDate) >= 6 {
+			year := row.TradeDate[:4]
+			month := row.TradeDate[4:6]
+			key := year + "-" + month
+			partitions[key] = append(partitions[key], row)
+		}
+	}
+	for partKey, partRows := range partitions {
+		file, err := parquet.WriteRecords(s.writer, "daily", map[string]string{"partition": partKey}, partRows)
+		if err != nil {
+			return fmt.Errorf("write daily parquet (partition %s): %w", partKey, err)
+		}
+		if err := s.manifests.Append("daily", file); err != nil {
+			return fmt.Errorf("update daily manifest: %w", err)
+		}
+	}
+	return nil
 }
 
 func (s *Syncer) SyncDatasetByDate(ctx context.Context, datasetName, tradeDate string) error {

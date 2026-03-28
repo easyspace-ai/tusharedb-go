@@ -193,7 +193,7 @@ func (c *Client) GetHotEvents() ([]HotEvent, error) {
 func (c *Client) GetHotTopics() ([]HotTopic, error) {
 	var payload struct {
 		Re []struct {
-			HTID        string `json:"htid"`
+			// htid 在东财 JSON 中可能为数值或字符串，此处不解析（未使用）；需要时可改为 json.RawMessage
 			Nickname    string `json:"nickname"`
 			Desc        string `json:"desc"`
 			ClickNumber int    `json:"clickNumber"`
@@ -677,14 +677,14 @@ func (c *Client) GetIndustryMoneyRank(fenlei, sort string) ([]IndustryMoneyRank,
 	}
 
 	var payload []struct {
-		Name           string `json:"name"`
-		AvgChangeRatio string `json:"avg_changeratio"`
+		Name           SinaJSONString `json:"name"`
+		AvgChangeRatio string         `json:"avg_changeratio"`
 		InAmount       string `json:"inamount"`
 		OutAmount      string `json:"outamount"`
 		NetAmount      string `json:"netamount"`
 		RatioAmount    string `json:"ratioamount"`
-		TSName         string `json:"ts_name"`
-		TSSymbol       string `json:"ts_symbol"`
+		TSName         SinaJSONString `json:"ts_name"`
+		TSSymbol       string         `json:"ts_symbol"`
 		TSTrade        string `json:"ts_trade"`
 		TSChangeRatio  string `json:"ts_changeratio"`
 		TSRatioAmount  string `json:"ts_ratioamount"`
@@ -706,13 +706,13 @@ func (c *Client) GetIndustryMoneyRank(fenlei, sort string) ([]IndustryMoneyRank,
 	items := make([]IndustryMoneyRank, 0, len(payload))
 	for _, item := range payload {
 		items = append(items, IndustryMoneyRank{
-			IndustryName:  item.Name,
+			IndustryName:  string(item.Name),
 			ChangePct:     parseFloat(item.AvgChangeRatio) * 100,
 			Inflow:        parseFloat(item.InAmount),
 			Outflow:       parseFloat(item.OutAmount),
 			NetInflow:     parseFloat(item.NetAmount),
 			NetRatio:      parseFloat(item.RatioAmount) * 100,
-			LeadStock:     item.TSName,
+			LeadStock:     string(item.TSName),
 			LeadStockCode: item.TSSymbol,
 			LeadChange:    parseFloat(item.TSChangeRatio) * 100,
 			LeadPrice:     parseFloat(item.TSTrade),
@@ -729,9 +729,9 @@ func (c *Client) GetStockMoneyRank(sort string) ([]StockMoneyRank, error) {
 	}
 
 	var payload []struct {
-		Code     string `json:"symbol"`
-		Name     string `json:"name"`
-		Trade    string `json:"trade"`
+		Code     string         `json:"symbol"`
+		Name     SinaJSONString `json:"name"`
+		Trade    string         `json:"trade"`
 		Change   string `json:"changeratio"`
 		Turnover string `json:"turnover"`
 		Amount   string `json:"amount"`
@@ -765,7 +765,7 @@ func (c *Client) GetStockMoneyRank(sort string) ([]StockMoneyRank, error) {
 	for _, item := range payload {
 		items = append(items, StockMoneyRank{
 			Code:         item.Code,
-			Name:         item.Name,
+			Name:         string(item.Name),
 			Price:        parseFloat(item.Trade),
 			ChangePct:    parseFloat(item.Change) * 100,
 			TurnoverRate: parseFloat(item.Turnover),
@@ -864,6 +864,7 @@ func (c *Client) GetGlobalIndexes() ([]GlobalIndex, error) {
 				Change:     parseFloat(item.Zde),
 				ChangePct:  parseFloat(strings.TrimSuffix(item.Zdf, "%")),
 				UpdateTime: firstNonEmpty(item.Time, item.State),
+				Region:     key,
 			})
 		}
 	}

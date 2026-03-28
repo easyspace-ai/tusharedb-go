@@ -79,6 +79,12 @@ type DailyQuoteProvider interface {
 	FetchDailyRange(ctx context.Context, startDate, endDate string) ([]DailyRow, error)
 }
 
+// ScopedDailyQuoteProvider 可选实现：仅拉取指定 ts_code 列表的日线。
+// StockSDK 等数据源若实现本接口，可避免 FetchDailyRange 对全市场逐只拉取。
+type ScopedDailyQuoteProvider interface {
+	FetchDailyRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]DailyRow, error)
+}
+
 // AdjFactorProvider 复权因子提供者接口
 type AdjFactorProvider interface {
 	// FetchAdjFactor 获取复权因子（单个交易日横截面）
@@ -86,6 +92,11 @@ type AdjFactorProvider interface {
 
 	// FetchAdjFactorRange 获取复权因子（日期范围）
 	FetchAdjFactorRange(ctx context.Context, startDate, endDate string) ([]AdjFactorRow, error)
+}
+
+// ScopedAdjFactorProvider 可选实现：仅拉取指定 ts_code 的复权因子区间（避免全市场 FetchAdjFactorRange）。
+type ScopedAdjFactorProvider interface {
+	FetchAdjFactorRangeForSymbols(ctx context.Context, tsCodes []string, startDate, endDate string) ([]AdjFactorRow, error)
 }
 
 // DailyBasicProvider 每日指标提供者接口
@@ -150,22 +161,22 @@ type AdjFactorRow struct {
 
 // DailyBasicRow 每日基本面指标数据行
 type DailyBasicRow struct {
-	TSCode         string  `json:"ts_code" parquet:"ts_code"`
-	TradeDate      string  `json:"trade_date" parquet:"trade_date"`
-	Close          float64 `json:"close" parquet:"close"`
-	TurnoverRate   float64 `json:"turnover_rate" parquet:"turnover_rate"`
-	TurnoverRateF  float64 `json:"turnover_rate_f" parquet:"turnover_rate_f"`
-	VolumeRatio    float64 `json:"volume_ratio" parquet:"volume_ratio"`
-	PE             float64 `json:"pe" parquet:"pe"`
-	PETTM          float64 `json:"pe_ttm" parquet:"pe_ttm"`
-	PB             float64 `json:"pb" parquet:"pb"`
-	PS             float64 `json:"ps" parquet:"ps"`
-	PSTTM          float64 `json:"ps_ttm" parquet:"ps_ttm"`
-	DVRatio        float64 `json:"dv_ratio" parquet:"dv_ratio"`
-	DVTTM          float64 `json:"dv_ttm" parquet:"dv_ttm"`
-	TotalShare     float64 `json:"total_share" parquet:"total_share"`
-	FloatShare     float64 `json:"float_share" parquet:"float_share"`
-	FreeShare      float64 `json:"free_share" parquet:"free_share"`
-	TotalMV        float64 `json:"total_mv" parquet:"total_mv"`
-	CircMV         float64 `json:"circ_mv" parquet:"circ_mv"`
+	TSCode        string  `json:"ts_code" parquet:"ts_code"`
+	TradeDate     string  `json:"trade_date" parquet:"trade_date"`
+	Close         float64 `json:"close" parquet:"close"`
+	TurnoverRate  float64 `json:"turnover_rate" parquet:"turnover_rate"`
+	TurnoverRateF float64 `json:"turnover_rate_f" parquet:"turnover_rate_f"`
+	VolumeRatio   float64 `json:"volume_ratio" parquet:"volume_ratio"`
+	PE            float64 `json:"pe" parquet:"pe"`
+	PETTM         float64 `json:"pe_ttm" parquet:"pe_ttm"`
+	PB            float64 `json:"pb" parquet:"pb"`
+	PS            float64 `json:"ps" parquet:"ps"`
+	PSTTM         float64 `json:"ps_ttm" parquet:"ps_ttm"`
+	DVRatio       float64 `json:"dv_ratio" parquet:"dv_ratio"`
+	DVTTM         float64 `json:"dv_ttm" parquet:"dv_ttm"`
+	TotalShare    float64 `json:"total_share" parquet:"total_share"`
+	FloatShare    float64 `json:"float_share" parquet:"float_share"`
+	FreeShare     float64 `json:"free_share" parquet:"free_share"`
+	TotalMV       float64 `json:"total_mv" parquet:"total_mv"`
+	CircMV        float64 `json:"circ_mv" parquet:"circ_mv"`
 }
